@@ -1,0 +1,73 @@
+---
+- hosts: vagrant
+  user: ubuntu
+  become: true
+  tasks:
+
+    ##########
+    # common #
+    ##########
+
+    - name: apt-get update
+      apt: update_cache=yes cache_valid_time=3600
+
+    - name: install common libraries
+      apt: name={{ item }} state=present
+      with_items:
+        - build-essential
+
+    ###########
+    # python3 #
+    ###########
+
+    - name: copy python tar source
+      unarchive:
+        src: files/Python-3.5.1.tgz
+        dest: /home/ubuntu/
+
+    - name: build python
+      command: >
+        {{ item }}
+        chdir=/home/ubuntu/Python-3.5.1
+        creates=/usr/local/bin/python3
+      with_items:
+        - ./configure
+        - make
+        - sudo make install
+
+    - name: replace existing python executable
+      file:
+        src: "/usr/local/bin/{{ item }}"
+        dest: "/usr/bin/{{ item }}"
+        state: link
+        force: yes
+      with_items:
+        - 2to3
+        - idle3
+        - pydoc3
+        - python3
+        - python3-config
+        - pyvenv
+
+
+    ##########
+    # cvxopt #
+    ##########
+
+    - name: install cvxopt dependencies (atlas, blas, lapack)
+      apt: name={{ item }} state=present
+      with_items:
+        - libatlas-base-dev
+        - libblas-dev
+        - liblapack-dev
+
+    - name: copy cvxopt tar source
+      unarchive:
+        src: files/cvxopt-1.1.8.tar.gz
+        dest: /home/ubuntu/
+
+    - name: install cvxopt
+      command: >
+        python3 setup.py install
+        chdir=/home/ubuntu/cvxopt-1.1.8
+        creates=/usr/local/lib/python3.5/site-packages/cvxopt
